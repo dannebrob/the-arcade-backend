@@ -26,7 +26,7 @@ app.get("/", (req, res) => {
 
 
 /////////////// User authentication start
-// Create user 
+// Create user
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
@@ -45,7 +45,7 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
-// Create register
+// Endpoint to register
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
   // Hash the password
@@ -80,7 +80,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// Create login
+// Endpoint to login
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -156,7 +156,7 @@ const  reviewSchema = new mongoose.Schema({
 
 const Review = mongoose.model("Review", reviewSchema);
 
-// Post review
+// Endpoint to post new review
 
 app.post("/reviews", authenticateUser);
 app.post("/reviews", async (req, res) => {
@@ -173,17 +173,17 @@ app.post("/reviews", async (req, res) => {
     } else {
       res.status(400).json({
         success: false, 
-        response: "Could not post review"})
+        response: "Could not POST review"})
     }
   } catch(e) {
     res.status(500).json({
       success: false,
-      response: error
+      response: e
     })
   }
 });
 
-// Get reviews
+// Endpoint to find all reviews by one user
 
 app.get("/reviews", authenticateUser);
 app.get("/reviews", async (req, res) => {
@@ -194,7 +194,7 @@ app.get("/reviews", async (req, res) => {
   try {
     if (reviews) {
       res.status(200).json({
-        success: true, 
+        success: true,
         response: reviews})
     } else {
       res.status(400).json({
@@ -207,9 +207,65 @@ app.get("/reviews", async (req, res) => {
       success: false,
       response: e
     })
+  } 
+});
+
+// Endpoint to find a single review by a user
+
+app.get("/reviews/:_id", authenticateUser);
+app.get("/reviews/:_id", async (req, res) => {
+  const accessToken = req.header("Authorization");
+  const user = await User.findOne({accessToken});
+  const singleReview = await Review.findById(req.params._id);
+  // try catch, if else
+  try {
+    if (singleReview) {
+      res.status(200).json({
+        success: true, 
+        response: singleReview})
+    } else {
+      res.status(400).json({
+        success: false, 
+        message: "Could not GET review",
+        response: e})
+    }
+  } catch(e) {
+    res.status(500).json({
+      success: false,
+      message: "Faulty ID",
+      response: e
+    })
   }
-  
-})
+});
+
+
+// Endpoint to delete a review:
+
+app.delete("/reviews/:_id", authenticateUser);
+app.delete("/reviews/:_id", async (req, res) => {
+  const accessToken = req.header("Authorization");
+  const user = await User.findOne({accessToken});
+  const deletedReview = await Review.findByIdAndDelete(req.params._id);
+  try {
+    if (deletedReview) {
+      res.status(200).json({
+        success: true, 
+        message: "Review successfully deleted",
+        deletedReview: deletedReview})
+    } else {
+      res.status(400).json({
+        success: false, 
+        message: "Could not delete review",
+        response: e})
+    }
+  } catch(e) {
+    res.status(500).json({
+      success: false,
+      message: "Faulty ID",
+      response: e
+    })
+  }
+});
 
 
 
