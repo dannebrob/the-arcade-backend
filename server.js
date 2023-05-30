@@ -40,6 +40,10 @@ const userSchema = new mongoose.Schema({
   accessToken: {
     type: String,
     default: () => crypto.randomBytes(128).toString("hex")
+  },
+  createdAt: {
+    type: Date,
+    default: () => new Date()
   }
 });
 
@@ -61,7 +65,8 @@ app.post("/register", async (req, res) => {
         response: {
           username: newUser.username,
           id: newUser._id,
-          accessToken: newUser.accessToken
+          accessToken: newUser.accessToken,
+          createdAt: newUser.createdAt
         }
       })
     } else {
@@ -84,7 +89,6 @@ app.post("/register", async (req, res) => {
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   try {
-    // const user = await User.findOne({ username: username })
     const user = await User.findOne({ username })
     if (user && bcrypt.compareSync(password, user.password)) {
       res.status(201).json({
@@ -92,7 +96,8 @@ app.post("/login", async (req, res) => {
         response: {
           username: user.username,
           id: user._id,
-          accessToken: user.accessToken
+          accessToken: user.accessToken,
+          createdAt: user.createdAt
         }
       })
     } else {
@@ -156,7 +161,7 @@ const  reviewSchema = new mongoose.Schema({
 
 const Review = mongoose.model("Review", reviewSchema);
 
-// Endpoint to post new review
+// Endpoint to post new review (when logged in)
 
 app.post("/reviews", authenticateUser);
 app.post("/reviews", async (req, res) => {
@@ -173,7 +178,7 @@ app.post("/reviews", async (req, res) => {
     } else {
       res.status(400).json({
         success: false, 
-        response: "Could not POST review"})
+        response: "Please log in to POST review"})
     }
   } catch(e) {
     res.status(500).json({
@@ -183,7 +188,7 @@ app.post("/reviews", async (req, res) => {
   }
 });
 
-// Endpoint to find all reviews by one user
+// Endpoint to find all reviews by one specific user (when logged in)
 
 app.get("/reviews", authenticateUser);
 app.get("/reviews", async (req, res) => {
@@ -199,7 +204,7 @@ app.get("/reviews", async (req, res) => {
     } else {
       res.status(400).json({
         success: false, 
-        message: "Could not GET reviews",
+        message: "Please log in to GET reviews",
         response: e})
     }
   } catch(e) {
@@ -210,7 +215,7 @@ app.get("/reviews", async (req, res) => {
   } 
 });
 
-// Endpoint to find a single review by a user
+// Endpoint to find one specific review by one specific user (when logged in)
 
 app.get("/reviews/:_id", authenticateUser);
 app.get("/reviews/:_id", async (req, res) => {
@@ -226,7 +231,7 @@ app.get("/reviews/:_id", async (req, res) => {
     } else {
       res.status(400).json({
         success: false, 
-        message: "Could not GET review",
+        message: "Please log in to GET review",
         response: e})
     }
   } catch(e) {
@@ -239,7 +244,7 @@ app.get("/reviews/:_id", async (req, res) => {
 });
 
 
-// Endpoint to delete a review:
+// Endpoint to delete one specific review by one specific user (when logged in)
 
 app.delete("/reviews/:_id", authenticateUser);
 app.delete("/reviews/:_id", async (req, res) => {
@@ -255,7 +260,7 @@ app.delete("/reviews/:_id", async (req, res) => {
     } else {
       res.status(400).json({
         success: false, 
-        message: "Could not delete review",
+        message: "Please log in to DELETE review",
         response: e})
     }
   } catch(e) {
