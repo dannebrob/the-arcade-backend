@@ -3,6 +3,7 @@ import cors from "cors";
 import mongoose from "mongoose";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
+import { error } from "console";
 
 const mongoUrl = process.env.MONGO_URL || "mongodb://127.0.0.1:27017/project-mongo"
 mongoose.connect(mongoUrl, { useNewUrlParser: true, useUnifiedTopology: true });
@@ -24,7 +25,7 @@ app.get("/", (req, res) => {
 });
 
 
-/////////////// Authentication
+/////////////// User authentication start
 // Create user 
 const userSchema = new mongoose.Schema({
   username: {
@@ -44,7 +45,7 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
-// Create registration 
+// Create register
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
   // Hash the password
@@ -73,6 +74,7 @@ app.post("/register", async (req, res) => {
   } catch (e) {
     res.status(400).json({
       success: false,
+      message: "Could not register user",
       response: e
     })
   }
@@ -96,17 +98,120 @@ app.post("/login", async (req, res) => {
     } else {
       res.status(400).json({
         success: false,
-        response: "Credentials do not match"
+        message: "Credentials do not match"
       })
     }
   } catch (e) {
     res.status(500).json({
       success: false,
+      message: "Could not log in user",
       response: e
     })
   }
+});
+
+// Authenticate user
+const authenticateUser = async (req, res, next) => {
+  const accessToken = req.header("Authorization");
+  try {
+    const user = await User.findOne({accessToken})
+    if (user) {
+      next();
+    } else {
+      res.status(401).json({
+        success:false,
+        response: "Please log in"
+      })
+    }
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      message: "Could not authenticate user",
+      response: e
+    })
+  }
+};
+/////////////// User authentication end
+
+/////////////// Reviews start
+// Create review
+
+const  reviewSchema = new mongoose.Schema({
+  message: {
+    type: String
+  },
+  createdAt: {
+    type: Date,
+    default: () => new Date()
+  },
+  //hearts: {
+    //type: Number,
+    //default: 0
+  //},
+  user: {
+    type: String,
+    required: true
+  }
+});
+
+const Review = mongoose.model("Review", reviewSchema);
+
+// Post review
+
+app.post("/reviews", authenticateUser);
+app.post("/reviews", async (req, res) => {
+  const { message } = req.body;
+  const accessToken = req.header("Authorization");
+  const user = await User.findOne({accessToken})
+  const reviews = await new Review({message: message, user: user._id}).save()
+  // try catch, if else
+  try {
+    if (reviews) {
+      res.status(200).json({
+        success: true, 
+        response: reviews})
+    } else {
+      res.status(400).json({
+        success: false, 
+        response: "Could not post review"})
+    }
+  } catch(e) {
+    res.status(500).json({
+      success: false,
+      response: error
+    })
+  }
+});
+
+// Get reviews
+
+app.get("/reviews", authenticateUser);
+app.get("/reviews", async (req, res) => {
+  const accessToken = req.header("Authorization");
+  const user = await User.findOne({accessToken})
+  const reviews = await Review.find({user: user._id});
+  // try catch, if else
+  try {
+    if (reviews) {
+      res.status(200).json({
+        success: true, 
+        response: reviews})
+    } else {
+      res.status(400).json({
+        success: false, 
+        message: "Could not GET reviews",
+        response: e})
+    }
+  } catch(e) {
+    res.status(500).json({
+      success: false,
+      response: e
+    })
+  }
+  
 })
-/////////////// Authentication end
+
+
 
 // Start the server
 app.listen(port, () => {
