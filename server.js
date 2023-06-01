@@ -3,7 +3,6 @@ import cors from "cors";
 import mongoose from "mongoose";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
-import { error } from "console";
 
 const mongoUrl = process.env.MONGO_URL || "mongodb://127.0.0.1:27017/project-mongo"
 mongoose.connect(mongoUrl, { useNewUrlParser: true, useUnifiedTopology: true });
@@ -24,8 +23,6 @@ app.get("/", (req, res) => {
   res.send("Hello Fuckface!");
 });
 
-
-/////////////// User authentication start
 // Create user
 const userSchema = new mongoose.Schema({
   username: {
@@ -44,13 +41,40 @@ const userSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: () => new Date()
+  },
+  reviews: {
+    type: [reviewSchema]
   }
+});
+
+// Create review
+
+const  reviewSchema = new mongoose.Schema({
+  message: {
+    type: String
+  },
+  createdAt: {
+    type: Date,
+    default: () => new Date()
+  }
+  
+  // Some type of like functionality?
+
+  // user: {
+  //   type: String,
+  //   required: true
+  // }
 });
 
 const User = mongoose.model("User", userSchema);
 
-// Endpoint to register
-app.post("/register", async (req, res) => {
+// A Review model is not necessarily needed, but can be handy for additional review
+// specific functionalities, such as adding likes, comments
+// const Review = mongoose.model("Review", reviewSchema);
+
+// Register user
+
+app.post("users/register", async (req, res) => {
   const { username, password } = req.body;
   // Hash the password
   try {
@@ -85,8 +109,8 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// Endpoint to login
-app.post("/login", async (req, res) => {
+// Login user
+app.post("users/login", async (req, res) => {
   const { username, password } = req.body;
   try {
     const user = await User.findOne({ username })
@@ -115,6 +139,32 @@ app.post("/login", async (req, res) => {
   }
 });
 
+// Retrieve user details by ID
+
+app.get("/users/:_id", async (req, res) => {
+  const userId = req.params._id;
+  const user = await User.findById(userId);
+  try {
+    if (user) {
+      res.status(200).json({
+        success: true,
+        response: user})
+    } else {
+      res.status(400).json({
+        success: false, 
+        message: "Faulty user ID",
+        response: e})
+    }
+  } catch(e) {
+    res.status(500).json({
+      success: false,
+      message: "Could not GET user details",
+      response: e
+    })
+  } 
+});
+
+
 // Authenticate user
 const authenticateUser = async (req, res, next) => {
   const accessToken = req.header("Authorization");
@@ -136,30 +186,6 @@ const authenticateUser = async (req, res, next) => {
     })
   }
 };
-/////////////// User authentication end
-
-/////////////// Reviews start
-// Create review
-
-const  reviewSchema = new mongoose.Schema({
-  message: {
-    type: String
-  },
-  createdAt: {
-    type: Date,
-    default: () => new Date()
-  },
-  //hearts: {
-    //type: Number,
-    //default: 0
-  //},
-  user: {
-    type: String,
-    required: true
-  }
-});
-
-const Review = mongoose.model("Review", reviewSchema);
 
 // Endpoint to post new review (when logged in)
 
@@ -183,6 +209,34 @@ app.post("/reviews", async (req, res) => {
   } catch(e) {
     res.status(500).json({
       success: false,
+      response: e
+    })
+  }
+});
+
+// Endpoint to delete one specific review by one specific user (when logged in)
+
+app.delete("/reviews/:_id", authenticateUser);
+app.delete("/reviews/:_id", async (req, res) => {
+  const accessToken = req.header("Authorization");
+  const user = await User.findOne({accessToken});
+  const deletedReview = await Review.findByIdAndDelete(req.params._id);
+  try {
+    if (deletedReview) {
+      res.status(200).json({
+        success: true, 
+        message: "Review successfully deleted",
+        deletedReview: deletedReview})
+    } else {
+      res.status(400).json({
+        success: false, 
+        message: "Please log in to DELETE review",
+        response: e})
+    }
+  } catch(e) {
+    res.status(500).json({
+      success: false,
+      message: "Faulty ID",
       response: e
     })
   }
@@ -243,34 +297,6 @@ app.get("/reviews/:_id", async (req, res) => {
   }
 });
 
-
-// Endpoint to delete one specific review by one specific user (when logged in)
-
-app.delete("/reviews/:_id", authenticateUser);
-app.delete("/reviews/:_id", async (req, res) => {
-  const accessToken = req.header("Authorization");
-  const user = await User.findOne({accessToken});
-  const deletedReview = await Review.findByIdAndDelete(req.params._id);
-  try {
-    if (deletedReview) {
-      res.status(200).json({
-        success: true, 
-        message: "Review successfully deleted",
-        deletedReview: deletedReview})
-    } else {
-      res.status(400).json({
-        success: false, 
-        message: "Please log in to DELETE review",
-        response: e})
-    }
-  } catch(e) {
-    res.status(500).json({
-      success: false,
-      message: "Faulty ID",
-      response: e
-    })
-  }
-});
 
 
 
