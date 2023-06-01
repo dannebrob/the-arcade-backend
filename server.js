@@ -72,7 +72,7 @@ const User = mongoose.model("User", userSchema);
 // specific functionalities, such as adding likes, comments
 // const Review = mongoose.model("Review", reviewSchema);
 
-/////////////////////// Endpoints
+/////////////////////// User Endpoints
 
 // Register user
 
@@ -243,6 +243,9 @@ app.delete("/users/:_id", authenticateUser, async (req, res) => {
     }
   });
 
+/////////////////////// User Endpoints END
+
+/////////////////////// Review Endpoints
 
 // Endpoint to post new review (when logged in)
 
@@ -354,7 +357,83 @@ app.get("/reviews/:_id", async (req, res) => {
   }
 });
 
+////////////////////////////// Review Endpoints END
 
+////////////////////////////// Games endpoints
+
+// Endpoint to get all games
+
+app.get("/games", async (req, res) => {
+  const games = await Game.find();
+  try {
+    if (games) {
+      res.status(200).json({
+        success: true,
+        response: games})
+    } else {
+      res.status(400).json({
+        success: false, 
+        message: "Could not GET games",
+        response: e})
+    }
+  } catch(e) {
+    res.status(500).json({
+      success: false,
+      response: e
+    })
+  } 
+});
+
+// Endpoint to get one specific game
+
+app.get("/games/:_id", async (req, res) => {
+  const singleGame = await Game.findById(req.params._id);
+  try {
+    if (singleGame) {
+      res.status(200).json({
+        success: true,
+        response: singleGame})
+    } else {
+      res.status(400).json({
+        success: false, 
+        message: "Could not GET game",
+        response: e})
+    }
+  } catch(e) {
+    res.status(500).json({
+      success: false,
+      message: "Faulty ID",
+      response: e
+    })
+  } 
+});
+
+/////// Filtering and sorting
+
+// Retrieve games based on specific category
+// Example: /games?category=retro
+
+app.get("/games", async (req, res) => {
+  const category = req.query.category;
+  const games = await Game.find({category: category});
+  try {
+    if (games) {
+      res.status(200).json({
+        success: true,
+        response: games})
+    } else {
+      res.status(400).json({
+        success: false, 
+        message: "Could not GET games",
+        response: e})
+    }
+  } catch(e) {
+    res.status(500).json({
+      success: false,
+      response: e
+    })
+  } 
+});
 
 
 // Start the server
