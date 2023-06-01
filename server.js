@@ -72,6 +72,8 @@ const User = mongoose.model("User", userSchema);
 // specific functionalities, such as adding likes, comments
 // const Review = mongoose.model("Review", reviewSchema);
 
+/////////////////////// Endpoints
+
 // Register user
 
 app.post("users/register", async (req, res) => {
@@ -108,6 +110,28 @@ app.post("users/register", async (req, res) => {
     })
   }
 });
+
+// Authenticate user
+const authenticateUser = async (req, res, next) => {
+  const accessToken = req.header("Authorization");
+  try {
+    const user = await User.findOne({accessToken})
+    if (user) {
+      next();
+    } else {
+      res.status(401).json({
+        success:false,
+        response: "Please log in"
+      })
+    }
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      message: "Could not authenticate user",
+      response: e
+    })
+  }
+};
 
 // Login user
 app.post("users/login", async (req, res) => {
@@ -165,27 +189,60 @@ app.get("/users/:_id", async (req, res) => {
 });
 
 
-// Authenticate user
-const authenticateUser = async (req, res, next) => {
-  const accessToken = req.header("Authorization");
+// Update user details
+
+app.patch("/users/:_id", authenticateUser, async (req, res) => {
+  const userId = req.params._id;
+  const updates = req.body;
   try {
-    const user = await User.findOne({accessToken})
-    if (user) {
-      next();
+    const updatedUser = await User.findByIdAndUpdate(userId, updates, {new: true});
+    if (updatedUser) {
+      res.status(200).json({
+        success: true,
+        response: updatedUser});
     } else {
-      res.status(401).json({
-        success:false,
-        response: "Please log in"
+      res.status(400).json({
+        success: false,
+        message: "Faulty user ID",
+        response: e
       })
     }
-  } catch (e) {
-    res.status(500).json({
-      success: false,
-      message: "Could not authenticate user",
-      response: e
-    })
+  } catch(e) {
+      res.status(500).json({
+        success: false,
+        message: "Could not update user details",
+        response: e
+      })
+    }
   }
-};
+);
+
+// Delete user
+
+app.delete("/users/:_id", authenticateUser, async (req, res) => {
+  const userId = req.params._id;
+  try {
+    const deletedUser = await User.findByIdAndDelete(userId);
+    if (deletedUser) {
+      res.status(200).json({
+        success: true,
+        response: deletedUser});
+    } else {
+      res.status(400).json({
+        success: false,
+        message: "Faulty user ID",
+        response: e
+      })
+    }
+  } catch(e) {
+      res.status(500).json({
+        success: false,
+        message: "Could not delete user",
+        response: e
+      })
+    }
+  });
+
 
 // Endpoint to post new review (when logged in)
 
