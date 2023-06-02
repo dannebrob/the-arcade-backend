@@ -23,7 +23,9 @@ app.get('/', (req, res) => {
   res.send('Hello Fuckface!');
 });
 
-//database schema
+////////////////// Create schemas and models
+// Database schema
+
 const gameSchema = new mongoose.Schema({
   id: {
     type: Number,
@@ -49,7 +51,8 @@ const gameSchema = new mongoose.Schema({
   }
 });
 
-// Create user
+// User schema
+
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
@@ -69,11 +72,12 @@ const userSchema = new mongoose.Schema({
     default: () => new Date()
   },
   reviews: {
-    type: [reviewSchema]
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Review'
   }
 });
 
-// Create review
+// Review schema
 
 const reviewSchema = new mongoose.Schema({
   message: {
@@ -82,20 +86,30 @@ const reviewSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: () => new Date()
+  },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  game: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Game',
+    required: true
   }
-
   // Some type of like functionality?
-
-  // user: {
-  //   type: String,
-  //   required: true
-  // }
 });
+
+/////////////////// Create models
 
 const Game = mongoose.model('Game', gameSchema);
 const User = mongoose.model('User', userSchema);
+const Review = mongoose.model('Review', reviewSchema);
 
-// populate database with games
+///////////////////
+
+// Populate database with games
+
 const fetchAndSaveGames = async (offset, batchSize) => {
   try {
     const response = await fetch('https://api.igdb.com/v4/games', {
@@ -149,11 +163,8 @@ const fetchAllGames = async () => {
   }
 };
 
-// A Review model is not necessarily needed, but can be handy for additional review
-// specific functionalities, such as adding likes, comments
-// const Review = mongoose.model("Review", reviewSchema);
-
-/////////////////////// User Endpoints
+/////////////////////
+////// User Endpoints
 
 // Register user
 
@@ -334,6 +345,13 @@ app.delete('/users/:_id', authenticateUser, async (req, res) => {
 
 /////////////////////// Review Endpoints
 
+// Retrieve all reviews for a specific game
+
+app.get('/games/:_id/reviews', async (req, res) => {
+  const gameId = req.params._id;
+
+});
+
 // Endpoint to post new review (when logged in)
 
 app.post('/reviews', authenticateUser);
@@ -509,6 +527,31 @@ app.get('/games/:_id', async (req, res) => {
 
 /////// Filtering and sorting
 
+// Retrieve a list of all game categories 
+
+app.get('/games', async (req, res) => {
+  const categories = await Game.find().distinct('category'); // distinct() returns an array of unique values
+  try {
+    if (categories) {
+      res.status(200).json({
+        success: true,
+        response: categories
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Could not GET categories',
+        response: e
+      });
+    }
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      response: e
+    });
+  }
+})
+
 // Retrieve games based on specific category
 // Example: /games?category=retro
 
@@ -524,7 +567,7 @@ app.get('/games', async (req, res) => {
     } else {
       res.status(400).json({
         success: false,
-        message: 'Could not GET games',
+        message: 'No games found with that category',
         response: e
       });
     }
@@ -535,6 +578,61 @@ app.get('/games', async (req, res) => {
     });
   }
 });
+
+// Retrieve a list of all game platforms
+
+app.get('/games', async (req, res) => {
+  const platforms = await Game.find().distinct('platform');
+  try {
+    if (platforms) {
+      res.status(200).json({
+        success: true,
+        response: platforms
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Could not GET platforms',
+        response: e
+      });
+    }
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      response: e
+    });
+  }
+})
+
+// Searching for games based on a query string
+
+app.get('/games', async (req, res) => {
+  const search = req.query.search;
+  const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape special characters
+  const regex = new RegExp(escapedSearch, 'i'); // Perform case-insensitive search
+  const games = await Game.find({ name: { $regex: regex } });
+  try {
+    if (games.length > 0) {
+      res.status(200).json({
+        success: true,
+        response: games
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'No games found with that name',
+        response: e
+      });
+    }
+  } catch(e){
+    res.status(500).json({
+      success: false,
+      response: e
+    });
+  }
+});
+
+
 
 // Start the server
 app.listen(port, () => {
