@@ -4,7 +4,8 @@ import mongoose, { Schema } from 'mongoose';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 
-const mongoUrl = process.env.MONGO_URL || 'mongodb://127.0.0.1/the-arcade2';
+const mongoUrl =
+  process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/project-mongo';
 mongoose.connect(mongoUrl, { useNewUrlParser: true, useUnifiedTopology: true });
 mongoose.Promise = Promise;
 
@@ -20,7 +21,7 @@ app.use(express.json());
 
 // Start defining your routes here
 app.get('/', (req, res) => {
-  res.send('Hello Fuckface!');
+  res.send('Hello Hello!');
 });
 
 //database schema
@@ -108,11 +109,10 @@ const fetchAndSaveGames = async (offset, batchSize) => {
       body: `fields name,summary,cover.url; limit ${batchSize}; offset ${offset};`
     });
     const games = await response.json();
-    console.log(games);
+    // console.log(games);
 
     // Save the games to your database
     const newUser = await new Game(...games).save();
-    // Insert the games into the appropriate collection/table
 
     return games.length; // Return the number of games fetched in this batch
   } catch (error) {
@@ -149,6 +149,8 @@ const fetchAllGames = async () => {
   }
 };
 
+app.get('/fetch-games', fetchAllGames);
+
 // A Review model is not necessarily needed, but can be handy for additional review
 // specific functionalities, such as adding likes, comments
 // const Review = mongoose.model("Review", reviewSchema);
@@ -157,7 +159,7 @@ const fetchAllGames = async () => {
 
 // Register user
 
-app.post('users/register', async (req, res) => {
+app.post('/users/register', async (req, res) => {
   const { username, password } = req.body;
   // Hash the password
   try {
@@ -214,7 +216,6 @@ const authenticateUser = async (req, res, next) => {
 };
 
 // get game data
-app.get('/fetch-games', fetchAllGames);
 
 // Login user
 app.post('users/login', async (req, res) => {
