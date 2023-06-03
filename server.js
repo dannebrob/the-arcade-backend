@@ -28,28 +28,36 @@ app.get('/', (req, res) => {
 // Database schema
 
 const gameSchema = new mongoose.Schema({
-  id: {
-    type: Number,
-    required: true
-  },
+  name: String,
   cover: {
-    id: {
-      type: Number,
-      required: true
-    },
-    url: {
-      type: String,
-      required: true
+    url: String
+  },
+  first_release_date: Number,
+  genres: [
+    {
+      name: String
     }
-  },
-  name: {
-    type: String,
-    required: true
-  },
-  summary: {
-    type: String,
-    required: true
-  }
+  ],
+  summary: String,
+  slug: String,
+  involved_companies: [
+    {
+      company: {
+        name: String
+      }
+    }
+  ],
+  rating: Number,
+  screenshots: [
+    {
+      url: String
+    }
+  ],
+  platforms: [
+    {
+      name: String
+    }
+  ]
 });
 
 // User schema
@@ -120,13 +128,16 @@ const fetchAndSaveGames = async (offset, batchSize) => {
         'Client-ID': 'b5um59369k9qvopt63t0x23klw3umq',
         Accept: 'application/json'
       },
-      body: `fields name,summary,cover.url; limit ${batchSize}; offset ${offset};`
+      // body: `fields name, cover.url, first_release_date, platforms.name, genres.name, summary, slug, involved_companies.company.name, rating, screenshots.url; where platforms = (4,13,15,16,18,19,22,23,24,29,33,35,52, ); limit ${batchSize}; offset ${offset};`
+      body: `fields name, cover.url, first_release_date, platforms.name, genres.name, summary, slug, involved_companies.company.name, rating, screenshots.url; where platforms = 52; limit ${batchSize}; offset ${offset};`
     });
     const games = await response.json();
-    // console.log(games);
+    console.log(games);
 
-    // Save the games to your database
-    const newUser = await new Game(...games).save();
+    // Save each game to the database
+    for (const game of games) {
+      await new Game(game).save();
+    }
 
     return games.length; // Return the number of games fetched in this batch
   } catch (error) {
