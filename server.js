@@ -3,6 +3,11 @@ import cors from 'cors';
 import mongoose, { Schema } from 'mongoose';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
+import 'dotenv/config';
+
+require('dotenv').config();
+const clientID = process.env.IGDB_CLIENT_ID;
+const apiKey2 = process.env.IGDB_CLIENT_SECRET;
 
 const mongoUrl =
   process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/project-mongo';
@@ -57,7 +62,8 @@ const gameSchema = new mongoose.Schema({
     {
       name: String
     }
-  ]
+  ],
+  rating: Number
 });
 
 // User schema
@@ -117,18 +123,16 @@ const Review = mongoose.model('Review', reviewSchema);
 
 ///////////////////
 
-// Populate database with games
-
+// Populate database with games from IGDB API
 const fetchAndSaveGames = async (offset, batchSize) => {
   try {
     const response = await fetch('https://api.igdb.com/v4/games', {
       method: 'POST',
       headers: {
-        'Authorization': 'bearer x3szpni9f7z2x85qr6wycf78bvddyt',
-        'Client-ID': 'b5um59369k9qvopt63t0x23klw3umq',
+        'Authorization': process.env.IGDB_CLIENT_SECRET,
+        'Client-ID': process.env.IGDB_CLIENT_ID,
         Accept: 'application/json'
       },
-      // body: `fields name, cover.url, first_release_date, platforms.name, genres.name, summary, slug, involved_companies.company.name, rating, screenshots.url; where platforms = (4,13,15,16,18,19,22,23,24,29,33,35,52, ); limit ${batchSize}; offset ${offset};`
       body: `fields name, cover.url, first_release_date, platforms.name, genres.name, summary, slug, involved_companies.company.name, rating, screenshots.url; where platforms = 52; limit ${batchSize}; offset ${offset};`
     });
     const games = await response.json();
@@ -136,7 +140,23 @@ const fetchAndSaveGames = async (offset, batchSize) => {
 
     // Save each game to the database
     for (const game of games) {
-      await new Game(game).save();
+      const ratingResponse = await fetch(
+        'https://api.igdb.com/v4/game_ratings',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': process.env.IGDB_CLIENT_SECRET,
+            'Client-ID': process.env.IGDB_CLIENT_ID,
+            Accept: 'application/json'
+          },
+          body: `fields rating; where game = ${game.id}; limit 1; sort rating desc;`
+        }
+      );
+      const ratingData = await ratingResponse.json();
+      const rating = ratingData.length > 0 ? ratingData[0].rating : 0;
+
+      const gameWithRating = { ...game, rating };
+      await new Game(gameWithRating).save();
     }
 
     return games.length; // Return the number of games fetched in this batch
