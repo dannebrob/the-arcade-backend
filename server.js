@@ -167,6 +167,7 @@ const fetchAndSaveGames = async (offset, batchSize) => {
   }
 };
 
+
 const fetchAllGames = async () => {
   const batchSize = 1; // Number of games to fetch in each batch
   const totalGames = 10000; // Total number of games to fetch
@@ -297,8 +298,8 @@ app.post('users/login', async (req, res) => {
 
 app.get('/users/:_id', async (req, res) => {
   const userId = req.params._id;
-  const user = await User.findById(userId);
   try {
+    const user = await User.findById(userId);
     if (user) {
       res.status(200).json({
         success: true,
@@ -526,8 +527,8 @@ app.patch('/reviews/:_id', authenticateUser, async (req, res) => {
 
 app.delete('/reviews/:_id', authenticateUser, async (req, res) => {
   const reviewId = req.params._id;
-  const deletedReview = await Review.findByIdAndDelete(reviewId);
   try {
+    const deletedReview = await Review.findByIdAndDelete(reviewId);
     if (deletedReview) {
       res.status(200).json({
         success: true,
@@ -556,8 +557,8 @@ app.delete('/reviews/:_id', authenticateUser, async (req, res) => {
 // Endpoint to get all games
 
 app.get('/games', async (req, res) => {
-  const games = await Game.find();
   try {
+    const games = await Game.find();
     if (games) {
       res.status(200).json({
         success: true,
@@ -580,8 +581,8 @@ app.get('/games', async (req, res) => {
 // Endpoint to get one specific game
 
 app.get('/games/:_id', async (req, res) => {
-  const singleGame = await Game.findById(req.params._id);
   try {
+    const singleGame = await Game.findById(req.params._id);
     if (singleGame) {
       res.status(200).json({
         success: true,
@@ -606,80 +607,130 @@ app.get('/games/:_id', async (req, res) => {
 
 // Retrieve a list of all game genres
 
-app.get('/games', async (req, res) => {
-  const categories = await Game.find().distinct('category'); // distinct() returns an array of unique values
+app.get('/games/genres', async (req, res) => {
   try {
-    if (categories) {
+    const genres = await Game.distinct('genres.name'); // distinct() returns an array of unique values
       res.status(200).json({
         success: true,
-        response: categories
+        response: genres
+      });
+    } catch (e) {
+    res.status(500).json({
+      success: false,
+      message: 'Could not GET genres',
+      error: e.message
+    });
+  }
+});
+
+// Retrieve a list of genres for one specific game
+
+app.get('/games/:_id/genres', async (req, res) => {
+  try {
+    const genres = await Game.findById(req.params._id).distinct('genres.name');
+    if (genres.length === 0) {
+      res.status(200).json({
+        success: true,
+        response: [],
+        message: 'No genres found for this game'
       });
     } else {
-      res.status(400).json({
-        success: false,
-        message: 'Could not GET categories',
-        response: e
+      res.status(200).json({
+        success: true,
+        response: genres
       });
     }
   } catch (e) {
     res.status(500).json({
       success: false,
-      response: e
+      message: 'Could not GET genres',
+      error: e.message
     });
   }
 });
 
-// Retrieve games based on specific category
-// Example: /games?category=retro
 
-app.get('/games', async (req, res) => {
-  const category = req.query.category;
-  const games = await Game.find({ category: category });
+// Retrieve games based on specific genre
+
+app.get('/games/genres/:genre', async (req, res) => {
+  const genre = req.params.genre;
   try {
-    if (games) {
+    const games = await Game.find({ 'genres.name': genre });
+    if (games.length === 0) {
+      res.status(200).json({
+        success: true,
+        response: [],
+        message: 'No games found for this genre'
+      });
+    } else {
       res.status(200).json({
         success: true,
         response: games
       });
-    } else {
-      res.status(400).json({
-        success: false,
-        message: 'No games found with that category',
-        response: e
-      });
     }
   } catch (e) {
     res.status(500).json({
       success: false,
-      response: e
+      message: 'Could not GET games',
+      error: e.message
     });
   }
 });
 
+
 // Retrieve a list of all game platforms
 
-app.get('/games', async (req, res) => {
-  const platforms = await Game.find().distinct('platform');
+app.get('/games/platforms', async (req, res) => {
+  const platforms = await Game.distinct('platforms.name');
   try {
-    if (platforms) {
+    if (platforms.length === 0) {
+      res.status(200).json({
+        success: true,
+        response: [],
+        message: 'No platforms found'
+      });
+    } else {
       res.status(200).json({
         success: true,
         response: platforms
       });
+    }
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      message: 'Could not GET platforms',
+      error: e.message
+    });
+  }
+});
+
+// Retrieve a list of games based on a specific platform
+
+app.get('/games/platforms/:platform', async (req, res) => {
+  const platform = req.params.platform;
+  try {
+    const games = await Game.find({ 'platforms.name': platform });
+    if (games.length === 0) {
+      res.status(200).json({
+        success: true,
+        response: [],
+        message: 'No games found for this platform'
+      });
     } else {
-      res.status(400).json({
-        success: false,
-        message: 'Could not GET platforms',
-        response: e
+      res.status(200).json({
+        success: true,
+        response: games
       });
     }
   } catch (e) {
     res.status(500).json({
       success: false,
-      response: e
+      message: 'Could not GET games',
+      error: e.message
     });
   }
 });
+
 
 // Searching for games based on a query string
 
@@ -695,7 +746,7 @@ app.get('/games', async (req, res) => {
         response: games
       });
     } else {
-      res.status(400).json({
+      res.status(404).json({
         success: false,
         message: 'No games found with that name',
         response: e
@@ -704,7 +755,8 @@ app.get('/games', async (req, res) => {
   } catch (e) {
     res.status(500).json({
       success: false,
-      response: e
+      message: 'Could not GET games',
+      error: e.message
     });
   }
 });
