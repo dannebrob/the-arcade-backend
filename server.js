@@ -60,8 +60,16 @@ const gameSchema = new mongoose.Schema({
     {
       name: String
     }
-  ],
-  rating: Number
+  ]
+});
+
+// Virtual property for game release date (only year)
+
+gameSchema.virtual('release_year').get(function() { // must use regular function here, arrow functions do not bind their own this value
+  const timestamp = this.first_release_date;
+  const date = new Date(timestamp * 1000);
+  return date.getFullYear();
+  // return date.toLocaleDateString(); this will return the full date
 });
 
 // User schema
@@ -810,6 +818,47 @@ app.get('/games', async (req, res) => {
   }
 });
 
+// Sorting games based on release year
+
+const sortGamesByReleaseYear = async (req, res) => {
+  const { order } = req.query;
+
+  try {
+    // Fetch games from database
+    const games = await Game.find();
+
+    // Sort games by release year
+    games.sort((a, b) => {
+      const releaseYearA = a.release_year;
+      const releaseYearB = b.release_year;
+
+      if (releaseYearA < releaseYearB) {
+        return order === 'asc' ? -1 : 1;
+      }
+      if (releaseYearA > releaseYearB) {
+        return order === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+
+    res.status(200).json({
+      success: true,
+      response: games
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to sort games',
+      error: error.message
+    });
+  }
+};
+
+app.get('/games/sort', sortGamesByReleaseYear);
+// Example usage: /games/sort?order=asc
+// Or /games/sort?order=desc
+
+////////////////////// User collections
 ////////////////// Favorite games
 
 // Add game to favourites (only for logged in users)
