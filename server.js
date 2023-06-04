@@ -816,6 +816,148 @@ app.get('/games', async (req, res) => {
   }
 });
 
+////////////////// Favorite games
+
+// Add game to favourites (only for logged in users)
+
+app.post('/games/:_id/favourites', authenticateUser, async (req, res) => {
+  const gameId = req.params._id;
+  const userId = req.user._id;
+
+  try {
+    // Find user by id
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if game is already in favourites
+    const isGameInFavourites = user.favouriteGames.includes(gameId);
+    if (isGameInFavourites) {
+      return res.status(400).json({
+        success: false,
+        message: 'Game is already in favourites'
+      });
+    }
+
+    // Add game to favourites
+    await User.findByIdAndUpdate(userId, { $addToSet: { favouriteGames: gameId } }); // $addToSet prevents duplicates
+
+    res.status(201).json({
+      success: true,
+      message: 'Game added to favourites'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Could not add game to favourites',
+      error: error.message
+    });
+  }
+});
+
+
+// Get all favourite games (only for logged in users)
+
+app.get('/users/:_id/favourites', authenticateUser, async (req, res) => {
+  const userId = req.params._id;
+
+  try {
+    // Find user by id
+    const user = await User.findById(userId).populate('favouriteGames');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const favoriteGames = user.favouriteGames;
+
+    if (favoriteGames.length > 0) {
+      res.status(200).json({
+        success: true,
+        response: favoriteGames
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        response: [],
+        message: 'No favourite games found'
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Could not GET favourite games',
+      error: error.message
+    });
+  }
+});
+
+// Delete game from favourites (only for logged in users)
+
+app.delete('/games/:_id/favourites', authenticateUser, async (req, res) => {
+  const gameId = req.params._id;
+  const userId = req.user._id;
+
+  try {
+    // Find user by id
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Remove game from favourites
+
+    const updatedUser = await User.findByIdAndUpdate(userId, { $pull: { favouriteGames: gameId } }, { new: true });
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Game not found in favourites'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Game removed from favourites',
+      response: updatedUser.favouriteGames
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Could not remove game from favourites',
+      error: error.message
+    });
+  }
+});
+
+////////////////// Logged games
+
+// Add game to logged games (only for logged in users)
+
+// Get all logged games (only for logged in users)
+
+// Delete game from logged games (only for logged in users)
+
+///////////////// Wanted games
+
+// Add game to wanted games (only for logged in users)
+
+// Get all wanted games (only for logged in users)
+
+// Delete game from wanted games (only for logged in users)
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
