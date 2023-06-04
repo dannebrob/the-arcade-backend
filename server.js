@@ -4,6 +4,7 @@ import mongoose, { Schema } from 'mongoose';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import 'dotenv/config';
+import { error } from 'console';
 
 require('dotenv').config();
 const clientID = process.env.IGDB_CLIENT_ID;
@@ -340,11 +341,11 @@ app.patch('/users/:_id', authenticateUser, async (req, res) => {
         response: e
       });
     }
-  } catch (e) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Could not update user details',
-      response: e
+      error: error.message
     });
   }
 });
@@ -367,11 +368,11 @@ app.delete('/users/:_id', authenticateUser, async (req, res) => {
         response: e
       });
     }
-  } catch (e) {
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: 'Could not delete user',
-      response: e
+      error: error.message
     });
   }
 });
@@ -384,122 +385,166 @@ app.delete('/users/:_id', authenticateUser, async (req, res) => {
 
 app.get('/games/:_id/reviews', async (req, res) => {
   const gameId = req.params._id;
-});
-
-// Endpoint to post new review (when logged in)
-
-app.post('/reviews', authenticateUser);
-app.post('/reviews', async (req, res) => {
-  const { message } = req.body;
-  const accessToken = req.header('Authorization');
-  const user = await User.findOne({ accessToken });
-  const reviews = await new Review({ message: message, user: user._id }).save();
-  // try catch, if else
   try {
-    if (reviews) {
+    const reviews = await Review.find({ game: gameId}).populate('user', 'username');
+
+    if (reviews.length === 0) {
+      // If game has no reviews
       res.status(200).json({
         success: true,
-        response: reviews
+        response: []
       });
     } else {
-      res.status(400).json({
-        success: false,
-        response: 'Please log in to POST review'
-      });
+    res.status(200).json({
+      success: true,
+      response: reviews
+    });
     }
-  } catch (e) {
+  } catch (error) {
     res.status(500).json({
       success: false,
-      response: e
+      message: 'Failed to retrieve reviews',
+      error: error.message
     });
   }
 });
 
-// Endpoint to delete one specific review by one specific user (when logged in)
+// Retrieve all reviews by one specific user
 
-app.delete('/reviews/:_id', authenticateUser);
-app.delete('/reviews/:_id', async (req, res) => {
-  const accessToken = req.header('Authorization');
-  const user = await User.findOne({ accessToken });
-  const deletedReview = await Review.findByIdAndDelete(req.params._id);
+app.get('/users/:_id/reviews', async (req, res) => { 
+  const userId = req.params._id;
+  try {
+    const reviews = await Review.find({ user: userId }).populate('game', 'name');
+    
+    if (reviews.length === 0) {
+      // If user has not posted any reviews
+    res.status(200).json({
+      success: true,
+      response: []
+    });
+    } else {
+      res.status(200).json({
+        success: true,
+        response: reviews
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve reviews',
+      error: error.message
+    });
+  }
+});
+
+// Post new review (only for logged in users)
+
+app.post('/games/:_id/reviews', authenticateUser, async (req, res) => {
+  const gameId = req.params._id;
+  const { message, userId } = req.body;
+  try {
+    const user = await User.findById(userId);
+    const game = await Game.findById(gameId);
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    if (!game) {
+      return res.status(400).json({
+        success: false,
+        message: 'Game not found'
+      });
+    }
+
+    const newReview = await new Review({
+      message: message,
+      user: userId,
+      game: gameId
+    });
+
+    const savedReview = await newReview.save();
+
+    // Update user's reviews array
+    const updatedReviews = [...user.reviews, savedReview._id];
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { reviews: updatedReviews },
+      { new: true }
+    );
+    
+    // user.reviews.push(savedReview._id);
+   //  await user.save();
+
+    res.status(201).json({
+      success: true,
+      response: savedReview
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to POST review',
+      error: error.message
+    });
+  }
+});
+
+
+// Update a review (only for logged in users)
+
+app.patch('/reviews/:_id', authenticateUser, async (req, res) => {
+  const reviewId = req.params._id;
+  const updates = req.body;
+  try {
+    const updatedReview = await Review.findByIdAndUpdate(reviewId, updates, {
+      new: true
+    });
+    if (updatedReview) {
+      res.status(200).json({
+        success: true,
+        response: updatedReview
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Could not find review',
+        response: e 
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Could not update review',
+      error: error.message
+    });
+  }
+});
+
+// Delete a review (only for logged in users)
+
+app.delete('/reviews/:_id', authenticateUser, async (req, res) => {
+  const reviewId = req.params._id;
+  const deletedReview = await Review.findByIdAndDelete(reviewId);
   try {
     if (deletedReview) {
       res.status(200).json({
         success: true,
-        message: 'Review successfully deleted',
-        deletedReview: deletedReview
+        response: deletedReview
       });
     } else {
       res.status(400).json({
         success: false,
-        message: 'Please log in to DELETE review',
+        message: 'Could not find review',
         response: e
       });
     }
   } catch (e) {
     res.status(500).json({
       success: false,
-      message: 'Faulty ID',
-      response: e
-    });
-  }
-});
-
-// Endpoint to find all reviews by one specific user (when logged in)
-
-app.get('/reviews', authenticateUser);
-app.get('/reviews', async (req, res) => {
-  const accessToken = req.header('Authorization');
-  const user = await User.findOne({ accessToken });
-  const reviews = await Review.find({ user: user._id });
-  // try catch, if else
-  try {
-    if (reviews) {
-      res.status(200).json({
-        success: true,
-        response: reviews
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        message: 'Please log in to GET reviews',
-        response: e
-      });
-    }
-  } catch (e) {
-    res.status(500).json({
-      success: false,
-      response: e
-    });
-  }
-});
-
-// Endpoint to find one specific review by one specific user (when logged in)
-
-app.get('/reviews/:_id', authenticateUser);
-app.get('/reviews/:_id', async (req, res) => {
-  const accessToken = req.header('Authorization');
-  const user = await User.findOne({ accessToken });
-  const singleReview = await Review.findById(req.params._id);
-  // try catch, if else
-  try {
-    if (singleReview) {
-      res.status(200).json({
-        success: true,
-        response: singleReview
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        message: 'Please log in to GET review',
-        response: e
-      });
-    }
-  } catch (e) {
-    res.status(500).json({
-      success: false,
-      message: 'Faulty ID',
-      response: e
+      message: 'Could not delete review',
+      error: e.message
     });
   }
 });
@@ -521,14 +566,13 @@ app.get('/games', async (req, res) => {
     } else {
       res.status(400).json({
         success: false,
-        message: 'Could not GET games',
-        response: e
+        message: 'Could not GET games'
       });
     }
   } catch (e) {
     res.status(500).json({
       success: false,
-      response: e
+      error: e.message
     });
   }
 });
@@ -546,22 +590,21 @@ app.get('/games/:_id', async (req, res) => {
     } else {
       res.status(400).json({
         success: false,
-        message: 'Could not GET game',
-        response: e
+        message: 'Could not find game'
       });
     }
   } catch (e) {
     res.status(500).json({
       success: false,
-      message: 'Faulty ID',
-      response: e
+      message: 'Could not GET game',
+      error: e.message
     });
   }
 });
 
 /////// Filtering and sorting
 
-// Retrieve a list of all game categories
+// Retrieve a list of all game genres
 
 app.get('/games', async (req, res) => {
   const categories = await Game.find().distinct('category'); // distinct() returns an array of unique values
