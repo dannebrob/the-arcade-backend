@@ -65,6 +65,9 @@ const gameSchema = new mongoose.Schema({
 
 // Virtual property for game release date (only year)
 
+// A virtual property is not persisted in the database but behaves like a regular property for read operations.
+// By using it here, we can access the year of a game's release as if it were a regular property.
+
 gameSchema.virtual('release_year').get(function() { // must use regular function here, arrow functions do not bind their own this value
   const timestamp = this.first_release_date;
   const date = new Date(timestamp * 1000);
@@ -855,8 +858,8 @@ const sortGamesByReleaseYear = async (req, res) => {
 };
 
 app.get('/games/sort', sortGamesByReleaseYear);
-// Example usage: /games/sort?order=asc
-// Or /games/sort?order=desc
+// Example usage: /games/sort?order=asc which will show oldest games first
+// Or /games/sort?order=desc which will show newest games first
 
 ////////////////////// User collections
 ////////////////// Favorite games
