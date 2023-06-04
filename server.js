@@ -4,7 +4,6 @@ import mongoose, { Schema } from 'mongoose';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import 'dotenv/config';
-import { error } from 'console';
 
 require('dotenv').config();
 
@@ -165,7 +164,6 @@ const fetchAndSaveGames = async (offset, batchSize) => {
   }
 };
 
-
 const fetchAllGames = async () => {
   const batchSize = 1; // Number of games to fetch in each batch
   const totalGames = 10000; // Total number of games to fetch
@@ -196,9 +194,18 @@ const fetchAllGames = async () => {
 
 app.get('/fetch-games', fetchAllGames);
 
-// A Review model is not necessarily needed, but can be handy for additional review
-// specific functionalities, such as adding likes, comments
-// const Review = mongoose.model("Review", reviewSchema);
+// Protected route with admin authentication
+// app.get('/fetch-games', authenticateAdmin, fetchAllGames)
+
+// Authenticate admin middleware
+// Ensures that only authenticated admins can access the endpoint and trigger the fetching process
+// const authenticateAdmin = (req, res, next) => {
+// Check if the user is authenticated and is an admin
+  // You can implement your own logic to verify the admin status
+  // For example, checking if the user has an admin role or a specific flag in their user object
+  // if (req.user && req.user.isAdmin) {
+
+// Alternatively, comment out the function after the database has been populated
 
 /////////////////////// User Endpoints
 
@@ -376,9 +383,37 @@ app.delete('/users/:_id', authenticateUser, async (req, res) => {
   }
 });
 
+
 /////////////////////// User Endpoints END
 
 /////////////////////// Review Endpoints
+
+// Retrieve all reviews
+
+app.get('/games/reviews', async (req, res) => {
+  try {
+    const reviews = await Review.find().populate('user', 'username');
+    if (reviews.length === 0) {
+      // If there are no reviews
+      res.status(200).json({
+        success: true,
+        response: [],
+        message: 'There are no reviews'
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        response: reviews
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve reviews',
+      error: error.message
+    });
+  }
+});
 
 // Retrieve all reviews for a specific game
 
