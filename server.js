@@ -87,7 +87,25 @@ const userSchema = new mongoose.Schema({
   reviews: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Review'
-  }
+  },
+  favoriteGames: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Game'
+    }
+  ],
+  loggedGames: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Game'
+    }
+  ],
+  wantedGames: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Game'
+    }
+  ]
 });
 
 // Review schema
