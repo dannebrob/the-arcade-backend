@@ -231,14 +231,13 @@ app.get('/fetch-games', fetchAllGames);
 
 app.post('/users/register', async (req, res) => {
   const { username, password } = req.body;
-  // Hash the password
   try {
     const salt = bcrypt.genSaltSync();
-    const newUser = await new User({
+    const hashedPassword = bcrypt.hashSync(password, salt);
+    const newUser = await User.create({
       username: username,
-      password: bcrypt.hashSync(password, salt)
-    }).save();
-    if (newUser) {
+      password: hashedPassword // Hash the password
+    });
       res.status(201).json({
         success: true,
         response: {
@@ -248,17 +247,11 @@ app.post('/users/register', async (req, res) => {
           createdAt: newUser.createdAt
         }
       });
-    } else {
-      res.status(400).json({
-        success: false,
-        response: 'Could not register user'
-      });
-    }
-  } catch (e) {
+  } catch (error) {
     res.status(400).json({
       success: false,
       message: 'Could not register user',
-      response: e
+      error: error.message
     });
   }
 });
@@ -269,6 +262,7 @@ const authenticateUser = async (req, res, next) => {
   try {
     const user = await User.findOne({ accessToken });
     if (user) {
+      req.user = user;
       next();
     } else {
       res.status(401).json({
@@ -285,15 +279,15 @@ const authenticateUser = async (req, res, next) => {
   }
 };
 
-// get game data
 
 // Login user
-app.post('users/login', async (req, res) => {
+app.post('/users/login', async (req, res) => {
   const { username, password } = req.body;
   try {
     const user = await User.findOne({ username });
+
     if (user && bcrypt.compareSync(password, user.password)) {
-      res.status(201).json({
+      res.status(200).json({
         success: true,
         response: {
           username: user.username,
