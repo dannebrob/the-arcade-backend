@@ -402,7 +402,7 @@ app.delete('/users/:_id', authenticateUser, async (req, res) => {
 
 // Retrieve all reviews
 
-app.get('/games/reviews', async (req, res) => {
+app.get('/reviews', async (req, res) => {
   try {
     const reviews = await Review.find().populate('user', 'username');
     if (reviews.length === 0) {
@@ -544,7 +544,7 @@ app.post('/games/:_id/reviews', authenticateUser, async (req, res) => {
 
 // Update a review (only for logged in users)
 
-app.patch('/reviews/:_id', authenticateUser, async (req, res) => {
+app.patch('/games/reviews/:_id', authenticateUser, async (req, res) => {
   const reviewId = req.params._id;
   const updates = req.body;
   try {
@@ -574,7 +574,7 @@ app.patch('/reviews/:_id', authenticateUser, async (req, res) => {
 
 // Delete a review (only for logged in users)
 
-app.delete('/reviews/:_id', authenticateUser, async (req, res) => {
+app.delete('/games/reviews/:_id', authenticateUser, async (req, res) => {
   const reviewId = req.params._id;
   try {
     const deletedReview = await Review.findByIdAndDelete(reviewId);
