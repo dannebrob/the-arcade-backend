@@ -94,7 +94,7 @@ const userSchema = new mongoose.Schema({
       ref: 'Game'
     }
   ],
-  loggedGames: [
+  playedGames: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Game'
@@ -936,15 +936,132 @@ app.delete('/games/:_id/favourites', authenticateUser, async (req, res) => {
   }
 });
 
-////////////////// Logged games
+////////////////// Played games
 
-// Add game to logged games (only for logged in users)
+// Add game to played games (only for logged in users)
 
-// Get all logged games (only for logged in users)
+app.post('/games/:_id/played', authenticateUser, async (req, res) => {
+  const gameId = req.params._id;
+  const userId = req.user._id;
 
-// Delete game from logged games (only for logged in users)
+  try {
+    // Find user by id
+    const user = await User.findById(userId);
 
-///////////////// Wanted games
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if game is already in played collection
+    const isGameInPlayed = user.playedGames.includes(gameId);
+    if (isGameInPlayed) {
+      return res.status(400).json({
+        success: false,
+        message: 'Game is already in played collection'
+      });
+    }
+
+    // Add game to played collection
+    await User.findByIdAndUpdate(userId, { $addToSet: { playedGames: gameId } }); // $addToSet prevents duplicates
+
+    res.status(201).json({
+      success: true,
+      message: 'Game added to played collection'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Could not add game to played collection',
+      error: error.message
+    });
+  }
+});
+
+// Get all played games (only for logged in users)
+
+app.get('/users/:_id/played', authenticateUser, async (req, res) => {
+  const userId = req.params._id;
+
+  try {
+    // Find user by id
+    const user = await User.findById(userId).populate('playedGames');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const playedGames = user.playedGames;
+
+    if (playedGames.length > 0) {
+      res.status(200).json({
+        success: true,
+        response: playedGames
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        response: [],
+        message: 'No played games found'
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Could not GET played games',
+      error: error.message
+    });
+  }
+});
+
+// Delete game from played games (only for logged in users)
+
+app.delete('/games/:_id/played', authenticateUser, async (req, res) => {
+  const gameId = req.params._id;
+  const userId = req.user._id;
+
+  try {
+    // Find user by id
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Remove game from played collection
+
+    const updatedUser = await User.findByIdAndUpdate(userId, { $pull: { playedGames: gameId } }, { new: true });
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Game not found in played collection'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Game removed from played collection',
+      response: updatedUser.playedGames
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Could not remove game from played collection',
+      error: error.message
+    });
+  }
+});
+
+///////////////// Want to play collection
 
 // Add game to wanted games (only for logged in users)
 
