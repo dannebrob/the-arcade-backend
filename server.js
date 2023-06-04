@@ -7,8 +7,6 @@ import 'dotenv/config';
 import { error } from 'console';
 
 require('dotenv').config();
-const clientID = process.env.IGDB_CLIENT_ID;
-const apiKey2 = process.env.IGDB_CLIENT_SECRET;
 
 const mongoUrl =
   process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/project-mongo';
@@ -387,7 +385,10 @@ app.delete('/users/:_id', authenticateUser, async (req, res) => {
 app.get('/games/:_id/reviews', async (req, res) => {
   const gameId = req.params._id;
   try {
-    const reviews = await Review.find({ game: gameId}).populate('user', 'username');
+    const reviews = await Review.find({ game: gameId }).populate(
+      'user',
+      'username'
+    );
 
     if (reviews.length === 0) {
       // If game has no reviews
@@ -396,10 +397,10 @@ app.get('/games/:_id/reviews', async (req, res) => {
         response: []
       });
     } else {
-    res.status(200).json({
-      success: true,
-      response: reviews
-    });
+      res.status(200).json({
+        success: true,
+        response: reviews
+      });
     }
   } catch (error) {
     res.status(500).json({
@@ -412,17 +413,20 @@ app.get('/games/:_id/reviews', async (req, res) => {
 
 // Retrieve all reviews by one specific user
 
-app.get('/users/:_id/reviews', async (req, res) => { 
+app.get('/users/:_id/reviews', async (req, res) => {
   const userId = req.params._id;
   try {
-    const reviews = await Review.find({ user: userId }).populate('game', 'name');
-    
+    const reviews = await Review.find({ user: userId }).populate(
+      'game',
+      'name'
+    );
+
     if (reviews.length === 0) {
       // If user has not posted any reviews
-    res.status(200).json({
-      success: true,
-      response: []
-    });
+      res.status(200).json({
+        success: true,
+        response: []
+      });
     } else {
       res.status(200).json({
         success: true,
@@ -474,15 +478,14 @@ app.post('/games/:_id/reviews', authenticateUser, async (req, res) => {
       { reviews: updatedReviews },
       { new: true }
     );
-    
+
     // user.reviews.push(savedReview._id);
-   //  await user.save();
+    //  await user.save();
 
     res.status(201).json({
       success: true,
       response: savedReview
     });
-    
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -491,7 +494,6 @@ app.post('/games/:_id/reviews', authenticateUser, async (req, res) => {
     });
   }
 });
-
 
 // Update a review (only for logged in users)
 
@@ -511,7 +513,7 @@ app.patch('/reviews/:_id', authenticateUser, async (req, res) => {
       res.status(400).json({
         success: false,
         message: 'Could not find review',
-        response: e 
+        response: e
       });
     }
   } catch (error) {
