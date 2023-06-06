@@ -68,7 +68,8 @@ const gameSchema = new mongoose.Schema({
 // A virtual property is not persisted in the database but behaves like a regular property for read operations.
 // By using it here, we can access the year of a game's release as if it were a regular property.
 
-gameSchema.virtual('release_year').get(function() { // must use regular function here, arrow functions do not bind their own this value
+gameSchema.virtual('release_year').get(function () {
+  // must use regular function here, arrow functions do not bind their own this value
   const timestamp = this.first_release_date;
   const date = new Date(timestamp * 1000);
   return date.getFullYear();
@@ -95,10 +96,12 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: () => new Date()
   },
-  reviews: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Review'
-  },
+  reviews: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Review'
+    }
+  ],
   favoriteGames: [
     {
       type: mongoose.Schema.Types.ObjectId,
@@ -230,9 +233,9 @@ app.get('/fetch-games', fetchAllGames);
 // Ensures that only authenticated admins can access the endpoint and trigger the fetching process
 // const authenticateAdmin = (req, res, next) => {
 // Check if the user is authenticated and is an admin
-  // You can implement your own logic to verify the admin status
-  // For example, checking if the user has an admin role or a specific flag in their user object
-  // if (req.user && req.user.isAdmin) {
+// You can implement your own logic to verify the admin status
+// For example, checking if the user has an admin role or a specific flag in their user object
+// if (req.user && req.user.isAdmin) {
 
 // Alternatively, comment out the function after the database has been populated
 
@@ -249,15 +252,16 @@ app.post('/users/register', async (req, res) => {
       username: username,
       password: hashedPassword // Hash the password
     });
-      res.status(201).json({
-        success: true,
-        response: {
-          username: newUser.username,
-          id: newUser._id,
-          accessToken: newUser.accessToken,
-          createdAt: newUser.createdAt
-        }
-      });
+    res.status(201).json({
+      success: true,
+      response: {
+        username: newUser.username,
+        id: newUser._id,
+        accessToken: newUser.accessToken,
+        createdAt: newUser.createdAt,
+        reviews: newUser.reviews
+      }
+    });
   } catch (error) {
     res.status(400).json({
       success: false,
@@ -289,7 +293,6 @@ const authenticateUser = async (req, res, next) => {
     });
   }
 };
-
 
 // Login user
 app.post('/users/login', async (req, res) => {
@@ -405,7 +408,6 @@ app.delete('/users/:_id', authenticateUser, async (req, res) => {
     });
   }
 });
-
 
 /////////////////////// User Endpoints END
 
@@ -537,8 +539,8 @@ app.post('/games/:_id/reviews', authenticateUser, async (req, res) => {
       { new: true }
     );
 
-    // user.reviews.push(savedReview._id);
-    //  await user.save();
+    user.reviews.push(savedReview._id);
+    // await user.save();
 
     res.status(201).json({
       success: true,
@@ -670,11 +672,11 @@ app.get('/games/:_id', async (req, res) => {
 app.get('/games/genres', async (req, res) => {
   try {
     const genres = await Game.distinct('genres.name'); // distinct() returns an array of unique values
-      res.status(200).json({
-        success: true,
-        response: genres
-      });
-    } catch (e) {
+    res.status(200).json({
+      success: true,
+      response: genres
+    });
+  } catch (e) {
     res.status(500).json({
       success: false,
       message: 'Could not GET genres',
@@ -709,7 +711,6 @@ app.get('/games/:_id/genres', async (req, res) => {
   }
 });
 
-
 // Retrieve games based on specific genre
 
 app.get('/games/genres/:genre', async (req, res) => {
@@ -736,7 +737,6 @@ app.get('/games/genres/:genre', async (req, res) => {
     });
   }
 });
-
 
 // Retrieve a list of all game platforms
 
@@ -790,7 +790,6 @@ app.get('/games/platforms/:platform', async (req, res) => {
     });
   }
 });
-
 
 // Searching for games based on a query string
 
@@ -891,7 +890,9 @@ app.post('/games/:_id/favourites', authenticateUser, async (req, res) => {
     }
 
     // Add game to favourites
-    await User.findByIdAndUpdate(userId, { $addToSet: { favouriteGames: gameId } }); // $addToSet prevents duplicates
+    await User.findByIdAndUpdate(userId, {
+      $addToSet: { favouriteGames: gameId }
+    }); // $addToSet prevents duplicates
 
     res.status(201).json({
       success: true,
@@ -905,7 +906,6 @@ app.post('/games/:_id/favourites', authenticateUser, async (req, res) => {
     });
   }
 });
-
 
 // Get all favourite games (only for logged in users)
 
@@ -964,7 +964,11 @@ app.delete('/games/:_id/favourites', authenticateUser, async (req, res) => {
 
     // Remove game from favourites
 
-    const updatedUser = await User.findByIdAndUpdate(userId, { $pull: { favouriteGames: gameId } }, { new: true });
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { favouriteGames: gameId } },
+      { new: true }
+    );
 
     if (!updatedUser) {
       return res.status(404).json({
@@ -978,7 +982,6 @@ app.delete('/games/:_id/favourites', authenticateUser, async (req, res) => {
       message: 'Game removed from favourites',
       response: updatedUser.favouriteGames
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -1017,7 +1020,9 @@ app.post('/games/:_id/played', authenticateUser, async (req, res) => {
     }
 
     // Add game to played collection
-    await User.findByIdAndUpdate(userId, { $addToSet: { playedGames: gameId } }); // $addToSet prevents duplicates
+    await User.findByIdAndUpdate(userId, {
+      $addToSet: { playedGames: gameId }
+    }); // $addToSet prevents duplicates
 
     res.status(201).json({
       success: true,
@@ -1089,7 +1094,11 @@ app.delete('/games/:_id/played', authenticateUser, async (req, res) => {
 
     // Remove game from played collection
 
-    const updatedUser = await User.findByIdAndUpdate(userId, { $pull: { playedGames: gameId } }, { new: true });
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { playedGames: gameId } },
+      { new: true }
+    );
 
     if (!updatedUser) {
       return res.status(404).json({
@@ -1103,7 +1112,6 @@ app.delete('/games/:_id/played', authenticateUser, async (req, res) => {
       message: 'Game removed from played collection',
       response: updatedUser.playedGames
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
