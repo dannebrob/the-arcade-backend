@@ -667,7 +667,7 @@ app.get('/games/:_id', async (req, res) => {
 
 // Retrieve a list of all game genres
 
-app.get('/games/genres', async (req, res) => {
+app.get('/genres', async (req, res) => {
   try {
     const genres = await Game.distinct('genres.name'); // distinct() returns an array of unique values
       res.status(200).json({
