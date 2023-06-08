@@ -259,7 +259,9 @@ app.post('/users/register', async (req, res) => {
         id: newUser._id,
         accessToken: newUser.accessToken,
         createdAt: newUser.createdAt,
-        reviews: newUser.reviews
+        reviews: newUser.reviews,
+        favoriteGames: newUser.favoriteGames,
+        playedGames: newUser.playedGames
       }
     });
   } catch (error) {
@@ -307,7 +309,10 @@ app.post('/users/login', async (req, res) => {
           username: user.username,
           id: user._id,
           accessToken: user.accessToken,
-          createdAt: user.createdAt
+          createdAt: user.createdAt,
+          reviews: user.reviews,
+          favoriteGames: user.favoriteGames,
+          playedGames: user.playedGames
         }
       });
     } else {
@@ -864,9 +869,9 @@ app.get('/games/sort', sortGamesByReleaseYear);
 
 // Add game to favourites (only for logged in users)
 
-app.post('/games/:_id/favourites', authenticateUser, async (req, res) => {
-  const gameId = req.params._id;
-  const userId = req.user._id;
+app.post('/users/:_id/favorites', authenticateUser, async (req, res) => {
+  const userId = req.params._id;
+  const game = req.body.game;
 
   try {
     // Find user by id
@@ -880,8 +885,8 @@ app.post('/games/:_id/favourites', authenticateUser, async (req, res) => {
     }
 
     // Check if game is already in favourites
-    const isGameInFavourites = user.favouriteGames.includes(gameId);
-    if (isGameInFavourites) {
+    const isGameInFavorites = user.favoriteGames.some((favoriteGame) => favoriteGame._id.toString() === game._id.toString());
+    if (isGameInFavorites) {
       return res.status(400).json({
         success: false,
         message: 'Game is already in favourites'
@@ -890,30 +895,29 @@ app.post('/games/:_id/favourites', authenticateUser, async (req, res) => {
 
     // Add game to favourites
     await User.findByIdAndUpdate(userId, {
-      $addToSet: { favouriteGames: gameId }
+      $addToSet: { favoriteGames: game }
     }); // $addToSet prevents duplicates
 
     res.status(201).json({
       success: true,
-      message: 'Game added to favourites'
+      message: 'Game added to favorites'
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Could not add game to favourites',
+      message: 'Could not add game to favorites',
       error: error.message
     });
   }
 });
+// Get all favorite games (only for logged in users)
 
-// Get all favourite games (only for logged in users)
-
-app.get('/users/:_id/favourites', authenticateUser, async (req, res) => {
+app.get('/users/:_id/favorites', authenticateUser, async (req, res) => {
   const userId = req.params._id;
 
   try {
     // Find user by id
-    const user = await User.findById(userId).populate('favouriteGames');
+    const user = await User.findById(userId).populate('favoriteGames');
 
     if (!user) {
       return res.status(404).json({
@@ -922,7 +926,7 @@ app.get('/users/:_id/favourites', authenticateUser, async (req, res) => {
       });
     }
 
-    const favoriteGames = user.favouriteGames;
+    const favoriteGames = user.favoriteGames;
 
     if (favoriteGames.length > 0) {
       res.status(200).json({
@@ -933,13 +937,13 @@ app.get('/users/:_id/favourites', authenticateUser, async (req, res) => {
       res.status(200).json({
         success: true,
         response: [],
-        message: 'No favourite games found'
+        message: 'No favorite games found'
       });
     }
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Could not GET favourite games',
+      message: 'Could not GET favorite games',
       error: error.message
     });
   }
@@ -947,9 +951,8 @@ app.get('/users/:_id/favourites', authenticateUser, async (req, res) => {
 
 // Delete game from favourites (only for logged in users)
 
-app.delete('/games/:_id/favourites', authenticateUser, async (req, res) => {
-  const gameId = req.params._id;
-  const userId = req.user._id;
+app.delete('/users/:_id/favorites', authenticateUser, async (req, res) => {
+  const userId = req.params._id;
 
   try {
     // Find user by id
@@ -965,26 +968,26 @@ app.delete('/games/:_id/favourites', authenticateUser, async (req, res) => {
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { $pull: { favouriteGames: gameId } },
+      { $pull: { favoriteGames: gameId } },
       { new: true }
     );
 
     if (!updatedUser) {
       return res.status(404).json({
         success: false,
-        message: 'Game not found in favourites'
+        message: 'Game not found in favorites'
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'Game removed from favourites',
-      response: updatedUser.favouriteGames
+      message: 'Game removed from favorites',
+      response: updatedUser.favoriteGames
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Could not remove game from favourites',
+      message: 'Could not remove game from favorites',
       error: error.message
     });
   }
