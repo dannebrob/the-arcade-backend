@@ -599,8 +599,7 @@ app.delete('/games/reviews/:_id', authenticateUser, async (req, res) => {
     } else {
       res.status(400).json({
         success: false,
-        message: 'Could not find review',
-        response: e
+        message: 'Could not find review'
       });
     }
   } catch (e) {
