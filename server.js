@@ -273,8 +273,8 @@ app.post('/users/register', async (req, res) => {
         accessToken: newUser.accessToken,
         createdAt: newUser.createdAt,
         reviews: newUser.reviews,
-        favoriteGames: newUser.favoriteGames,
-        playedGames: newUser.playedGames
+        /* favoriteGames: newUser.favoriteGames,
+        playedGames: newUser.playedGames */
       }
     });
   } catch (error) {
@@ -324,8 +324,8 @@ app.post('/users/login', async (req, res) => {
           accessToken: user.accessToken,
           createdAt: user.createdAt,
           reviews: user.reviews,
-          favoriteGames: user.favoriteGames,
-          playedGames: user.playedGames
+          /* favoriteGames: user.favoriteGames,
+          playedGames: user.playedGames */
         }
       });
     } else {
@@ -976,7 +976,7 @@ app.get('/games/sort', sortGamesByReleaseYear);
 
 // Add game to favourites (only for logged in users)
 
-app.post('/users/:_id/favorites', authenticateUser, async (req, res) => {
+/* app.post('/users/:_id/favorites', authenticateUser, async (req, res) => {
   const userId = req.params._id;
   const { gameId } = req.body;
 
@@ -1098,7 +1098,7 @@ app.delete('/users/:_id/favorites', authenticateUser, async (req, res) => {
       error: error.message
     });
   }
-});
+}); */
 
 ////////////////// Played games
 
