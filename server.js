@@ -154,6 +154,10 @@ const reviewSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Game',
     required: true
+  },
+  game_name: {
+    type: String,
+    required: true
   }
   // Some type of like functionality?
 });
@@ -570,7 +574,8 @@ app.post('/games/:_id/reviews', authenticateUser, async (req, res) => {
     const newReview = await new Review({
       message: message,
       user: userId,
-      game: gameId
+      game: gameId,
+      game_name: game.name
     });
 
     const savedReview = await newReview.save();
