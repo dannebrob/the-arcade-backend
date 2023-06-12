@@ -3,6 +3,7 @@ import cors from 'cors';
 import mongoose, { Schema } from 'mongoose';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
+const { Configuration, OpenAIApi } = require('openai');
 import 'dotenv/config';
 import e from 'express';
 
@@ -12,6 +13,13 @@ const mongoUrl =
   process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/project-mongo';
 mongoose.connect(mongoUrl, { useNewUrlParser: true, useUnifiedTopology: true });
 mongoose.Promise = Promise;
+
+const { OPENAI_API_KEY } = process.env;
+
+const configuration = new Configuration({
+  apiKey: OPENAI_API_KEY
+});
+const openai = new OpenAIApi(configuration);
 
 // Defines the port the app will run on. Defaults to 8080, but can be overridden
 // when starting the server. Example command to overwrite PORT env variable value:
@@ -984,7 +992,7 @@ app.post('/users/:_id/favorites', authenticateUser, async (req, res) => {
     }
 
     // Check if game is already in favourites
-    const isGameInFavorites = user.favoriteGames.some((favoriteGame) => favoriteGame._id.toString() === gameId._id.toString());
+    const isGameInFavorites = user.favoriteGames.some((favoriteGame) => favoriteGame._id.toString() === game._id.toString());
     if (isGameInFavorites) {
       return res.status(400).json({
         success: false,
@@ -1219,6 +1227,21 @@ app.delete('/games/:_id/played', authenticateUser, async (req, res) => {
       message: 'Could not remove game from played collection',
       error: error.message
     });
+  }
+});
+
+////////////////// Open AI API Generate image
+app.post('/create', async (req, res) => {
+  const { prompt } = req.body;
+  try {
+    const response = await openai.createImage({
+      prompt,
+      n: 1,
+      size: '512x512'
+    });
+    res.send(response.data.data[0].url);
+  } catch (err) {
+    res.send(err.message);
   }
 });
 
