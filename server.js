@@ -4,6 +4,7 @@ import mongoose, { Schema } from 'mongoose';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import 'dotenv/config';
+import e from 'express';
 
 require('dotenv').config();
 
@@ -60,7 +61,11 @@ const gameSchema = new mongoose.Schema({
     {
       name: String
     }
-  ]
+  ],
+  savedFavoriteBy: {
+    type: [String],
+    default: []
+  },
 });
 
 // Virtual property for game release date (only year)
@@ -102,7 +107,7 @@ const userSchema = new mongoose.Schema({
       ref: 'Review'
     }
   ],
-  favoriteGames: [
+  /* favoriteGames: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Game'
@@ -114,12 +119,12 @@ const userSchema = new mongoose.Schema({
       ref: 'Game'
     }
   ],
-  wantedGames: [
+ /*  wantedGames: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Game'
     }
-  ]
+  ] */
 });
 
 // Review schema
@@ -669,6 +674,70 @@ app.get('/games/:_id', async (req, res) => {
   }
 });
 
+// Favorite games
+
+// Get user's favorite games
+
+app.get('/favoritegames', authenticateUser, async (req, res) => {
+  const accessToken = req.header('Authorization');
+  try {
+    const user = await User.findOne({ accessToken });
+    const userFavoriteGames = await Game.find({ savedFavoriteBy: user._id });
+
+    if (userFavoriteGames.length) {
+      res.status(200).json({
+        success: true,
+        response: userFavoriteGames
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'no favorites found'
+      });
+    } 
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      message: 'Could not GET favorites',
+      error: e.message
+    });
+  }
+});
+
+// Add or remove a game from user's favorites
+
+app.patch('/games/:_id/addfavorite', authenticateUser, async (req, res) => {
+  const { _id } = req.params;
+  const accessToken = req.header('Authorization');
+  try {
+    const user = await User.findOne({ accessToken });
+    const SpecificItem = await Game.findById(_id);
+
+    const favoritesArray = SpecificItem.savedFavoriteBy;
+    const UserExist = favoritesArray.find(userId => userId.toString() === user._id.toString());
+
+    if (UserExist) {
+      await Game.findByIdAndUpdate(_id, { $pull: { savedFavoriteBy: user._id } });
+    } else {
+      await Game.findByIdAndUpdate(_id, { $push: { savedFavoriteBy: user._id } });
+    }
+
+    const SavedItem = await Game.findById(_id);
+
+    res.status(201).json({
+      success: true,
+      response: SavedItem
+    });
+  } catch (e) {
+    res.status(400).json({
+      success: false,
+      message: 'Could not add favorite',
+      error: e.message
+    });
+  }
+});
+
+
 /////// Filtering and sorting
 
 // Retrieve a list of all game genres
@@ -742,9 +811,39 @@ app.get('/games/genres/:genre', async (req, res) => {
   }
 });
 
+// Sort by 
+// For example, /games/genres/action?sortBy=rating
+
+app.get('/games/genres/:genre', async (req, res) => {
+  const genre = req.params.genre;
+  const sortBy = req.query.sortBy || 'name'; // Default sort by name if sortBy query param is not provided
+
+  try {
+    const games = await Game.find({ 'genres.name': genre }).sort(sortBy);
+    if (games.length === 0) {
+      res.status(200).json({
+        success: true,
+        response: [],
+        message: 'No games found for this genre'
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        response: games
+      });
+    }
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      message: 'Could not GET games',
+      error: e.message
+    });
+  }
+});
+
 // Retrieve a list of all game platforms
 
-app.get('/games/platforms', async (req, res) => {
+/* app.get('/platforms', async (req, res) => {
   const platforms = await Game.distinct('platforms.name');
   try {
     if (platforms.length === 0) {
@@ -794,7 +893,7 @@ app.get('/games/platforms/:platform', async (req, res) => {
     });
   }
 });
-
+ */
 // Searching for games based on a query string
 
 app.get('/games', async (req, res) => {
@@ -871,7 +970,7 @@ app.get('/games/sort', sortGamesByReleaseYear);
 
 app.post('/users/:_id/favorites', authenticateUser, async (req, res) => {
   const userId = req.params._id;
-  const game = req.body.game;
+  const { gameId } = req.body;
 
   try {
     // Find user by id
@@ -885,7 +984,7 @@ app.post('/users/:_id/favorites', authenticateUser, async (req, res) => {
     }
 
     // Check if game is already in favourites
-    const isGameInFavorites = user.favoriteGames.some((favoriteGame) => favoriteGame._id.toString() === game._id.toString());
+    const isGameInFavorites = user.favoriteGames.some((favoriteGame) => favoriteGame._id.toString() === gameId._id.toString());
     if (isGameInFavorites) {
       return res.status(400).json({
         success: false,
@@ -895,7 +994,7 @@ app.post('/users/:_id/favorites', authenticateUser, async (req, res) => {
 
     // Add game to favourites
     await User.findByIdAndUpdate(userId, {
-      $addToSet: { favoriteGames: game }
+      $addToSet: { favoriteGames: gameId }
     }); // $addToSet prevents duplicates
 
     res.status(201).json({
