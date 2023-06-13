@@ -668,8 +668,11 @@ app.delete('/games/reviews/:_id', authenticateUser, async (req, res) => {
 
 app.get('/games', usePagination, async (req, res) => {
   try {
-    const games = await Game.find();
     const { pageHits, startIndex } = req.pagination;
+    let games = await Game.find()
+    .skip(startIndex)
+    .limit(pageHits);
+
     if (games) {
       res.status(200).json({
         success: true,
@@ -688,6 +691,104 @@ app.get('/games', usePagination, async (req, res) => {
     });
   }
 });
+
+// Sort by 
+// For example, /games/genres/action?sortBy=rating
+
+app.get('/games/genres/:genre', async (req, res) => {
+  const genre = req.params.genre;
+  const sortBy = req.query.sortBy || 'name'; // Default sort by name if sortBy query param is not provided
+
+  try {
+    const games = await Game.find({ 'genres.name': genre }).sort(sortBy);
+    if (games.length === 0) {
+      res.status(200).json({
+        success: true,
+        response: [],
+        message: 'No games found for this genre'
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        response: games
+      });
+    }
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      message: 'Could not GET games',
+      error: e.message
+    });
+  }
+});
+
+// Searching for games based on a query string
+
+app.get('/games', async (req, res) => {
+  const search = req.query.search;
+  const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape special characters
+  const regex = new RegExp(escapedSearch, 'i'); // Perform case-insensitive search
+  const games = await Game.find({ name: { $regex: regex } });
+  try {
+    if (games.length > 0) {
+      res.status(200).json({
+        success: true,
+        response: games
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'No games found with that name',
+        response: e
+      });
+    }
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      message: 'Could not GET games',
+      error: e.message
+    });
+  }
+});
+
+// Sorting games based on release year
+
+const sortGamesByReleaseYear = async (req, res) => {
+  const { order } = req.query;
+
+  try {
+    // Fetch games from database
+    const games = await Game.find();
+
+    // Sort games by release year
+    games.sort((a, b) => {
+      const releaseYearA = a.release_year;
+      const releaseYearB = b.release_year;
+
+      if (releaseYearA < releaseYearB) {
+        return order === 'asc' ? -1 : 1;
+      }
+      if (releaseYearA > releaseYearB) {
+        return order === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+
+    res.status(200).json({
+      success: true,
+      response: games
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to sort games',
+      error: error.message
+    });
+  }
+};
+
+app.get('/games/sort', sortGamesByReleaseYear);
+
 
 // Endpoint to get one specific game
 
@@ -851,36 +952,6 @@ app.get('/games/genres/:genre', async (req, res) => {
   }
 });
 
-// Sort by 
-// For example, /games/genres/action?sortBy=rating
-
-app.get('/games/genres/:genre', async (req, res) => {
-  const genre = req.params.genre;
-  const sortBy = req.query.sortBy || 'name'; // Default sort by name if sortBy query param is not provided
-
-  try {
-    const games = await Game.find({ 'genres.name': genre }).sort(sortBy);
-    if (games.length === 0) {
-      res.status(200).json({
-        success: true,
-        response: [],
-        message: 'No games found for this genre'
-      });
-    } else {
-      res.status(200).json({
-        success: true,
-        response: games
-      });
-    }
-  } catch (e) {
-    res.status(500).json({
-      success: false,
-      message: 'Could not GET games',
-      error: e.message
-    });
-  }
-});
-
 // Retrieve a list of all game platforms
 
 /* app.get('/platforms', async (req, res) => {
@@ -934,72 +1005,6 @@ app.get('/games/platforms/:platform', async (req, res) => {
   }
 });
  */
-// Searching for games based on a query string
-
-app.get('/games', async (req, res) => {
-  const search = req.query.search;
-  const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape special characters
-  const regex = new RegExp(escapedSearch, 'i'); // Perform case-insensitive search
-  const games = await Game.find({ name: { $regex: regex } });
-  try {
-    if (games.length > 0) {
-      res.status(200).json({
-        success: true,
-        response: games
-      });
-    } else {
-      res.status(404).json({
-        success: false,
-        message: 'No games found with that name',
-        response: e
-      });
-    }
-  } catch (e) {
-    res.status(500).json({
-      success: false,
-      message: 'Could not GET games',
-      error: e.message
-    });
-  }
-});
-
-// Sorting games based on release year
-
-const sortGamesByReleaseYear = async (req, res) => {
-  const { order } = req.query;
-
-  try {
-    // Fetch games from database
-    const games = await Game.find();
-
-    // Sort games by release year
-    games.sort((a, b) => {
-      const releaseYearA = a.release_year;
-      const releaseYearB = b.release_year;
-
-      if (releaseYearA < releaseYearB) {
-        return order === 'asc' ? -1 : 1;
-      }
-      if (releaseYearA > releaseYearB) {
-        return order === 'asc' ? 1 : -1;
-      }
-      return 0;
-    });
-
-    res.status(200).json({
-      success: true,
-      response: games
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to sort games',
-      error: error.message
-    });
-  }
-};
-
-app.get('/games/sort', sortGamesByReleaseYear);
 // Example usage: /games/sort?order=asc which will show oldest games first
 // Or /games/sort?order=desc which will show newest games first
 
