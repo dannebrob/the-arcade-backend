@@ -931,9 +931,10 @@ app.get('/games/genres/:genre', usePagination, async (req, res) => {
   const { pageHits, startIndex } = req.pagination;
   const genre = req.params.genre;
   try {
-    const games = await Game.find({ 'genres.name': genre })
+    let games = await Game.find({ 'genres.name': genre })
     .skip(startIndex)
     .limit(pageHits);
+    
     if (games.length === 0) {
       res.status(200).json({
         success: true,
