@@ -735,6 +735,11 @@ app.get('/games', usePagination, async (req, res) => {
    /*  const genre = req.params.genre; */
     /* const sortBy = req.query.sortBy || 'name'; // Default sort by name if sortBy query param is not provided */  
     const { genre, sort } = req.query;
+    let query = {};
+
+    if (genre) {
+      query['genres.name'] = genre;
+    }
     // default sort values
     let sortByProperty = 'name';
     let sortDirection = 'asc';
@@ -750,10 +755,10 @@ app.get('/games', usePagination, async (req, res) => {
 
     // check if release date exists
 
-    const query = { 
+    /* const query = { 
       'genres.name': genre,
       first_release_date: { $exists: true }
-    };
+    }; */
 
 
     let games = await Game.find(query)
