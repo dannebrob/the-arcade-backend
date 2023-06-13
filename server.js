@@ -695,12 +695,16 @@ app.get('/games', usePagination, async (req, res) => {
 // Sort by 
 // For example, /games/genres/action?sortBy=rating
 
-app.get('/games/genres/:genre', async (req, res) => {
+app.get('/games/genres/:genre', usePagination, async (req, res) => {
+  const { pageHits, startIndex } = req.pagination;
   const genre = req.params.genre;
   const sortBy = req.query.sortBy || 'name'; // Default sort by name if sortBy query param is not provided
 
   try {
-    const games = await Game.find({ 'genres.name': genre }).sort(sortBy);
+    const games = await Game.find({ 'genres.name': genre }).sort(sortBy)
+    .skip(startIndex)
+    .limit(pageHits);
+    
     if (games.length === 0) {
       res.status(200).json({
         success: true,
@@ -934,7 +938,7 @@ app.get('/games/genres/:genre', usePagination, async (req, res) => {
     let games = await Game.find({ 'genres.name': genre })
     .skip(startIndex)
     .limit(pageHits);
-    
+
     if (games.length === 0) {
       res.status(200).json({
         success: true,
