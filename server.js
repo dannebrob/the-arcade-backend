@@ -761,6 +761,8 @@ app.get('/games/genres/:genre', usePagination, async (req, res) => {
     .skip(startIndex)
     .limit(pageHits);
 
+    let totalGames = await Game.countDocuments(query);
+
     let filteredGames = games;
 
     if (games.length === 0) {
@@ -772,7 +774,10 @@ app.get('/games/genres/:genre', usePagination, async (req, res) => {
     } else {
       res.status(200).json({
         success: true,
-        response: filteredGames
+        response: {
+          games: filteredGames,
+          total: totalGames
+        }
       });
     }
   } catch (e) {
