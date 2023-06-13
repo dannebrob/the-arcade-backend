@@ -656,7 +656,7 @@ app.delete('/games/reviews/:_id', authenticateUser, async (req, res) => {
 
 // Endpoint to get all games
 
-app.get('/games', usePagination, async (req, res) => {
+/* app.get('/games', usePagination, async (req, res) => {
   try {
     const { pageHits, startIndex } = req.pagination;
     let games = await Game.find()
@@ -681,7 +681,7 @@ app.get('/games', usePagination, async (req, res) => {
     });
   }
 });
-
+ */
 // Retrieve a list of all game genres
 
 app.get('/genres', async (req, res) => {
@@ -726,15 +726,15 @@ app.get('/games/:_id/genres', async (req, res) => {
   }
 });
 
-// Get games by genre and sorting by query params
-// For example, /games/genres/action?sortBy=rating
+// Get all games and sort them by genre and release date
+// Example: games?genre=action&sort=releasedDesc
 
-app.get('/games/genres/:genre', usePagination, async (req, res) => {
+app.get('/games', usePagination, async (req, res) => {
   try {
     const { pageHits, startIndex } = req.pagination;
-    const genre = req.params.genre;
+   /*  const genre = req.params.genre; */
     /* const sortBy = req.query.sortBy || 'name'; // Default sort by name if sortBy query param is not provided */  
-    const { sort } = req.query;
+    const { genre, sort } = req.query;
     // default sort values
     let sortByProperty = 'name';
     let sortDirection = 'asc';
