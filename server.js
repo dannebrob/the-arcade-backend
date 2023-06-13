@@ -927,10 +927,13 @@ app.get('/games/:_id/genres', async (req, res) => {
 
 // Retrieve games based on specific genre
 
-app.get('/games/genres/:genre', async (req, res) => {
+app.get('/games/genres/:genre', usePagination, async (req, res) => {
+  const { pageHits, startIndex } = req.pagination;
   const genre = req.params.genre;
   try {
-    const games = await Game.find({ 'genres.name': genre });
+    const games = await Game.find({ 'genres.name': genre })
+    .skip(startIndex)
+    .limit(pageHits);
     if (games.length === 0) {
       res.status(200).json({
         success: true,
