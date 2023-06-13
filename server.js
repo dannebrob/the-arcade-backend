@@ -76,19 +76,6 @@ const gameSchema = new mongoose.Schema({
   },
 });
 
-// Virtual property for game release date (only year)
-
-// A virtual property is not persisted in the database but behaves like a regular property for read operations.
-// By using it here, we can access the year of a game's release as if it were a regular property.
-
-gameSchema.virtual('release_year').get(function () {
-  // must use regular function here, arrow functions do not bind their own this value
-  const timestamp = this.first_release_date;
-  const date = new Date(timestamp * 1000);
-  return date.getFullYear();
-  // return date.toLocaleDateString(); this will return the full date
-});
-
 // User schema
 
 const userSchema = new mongoose.Schema({
@@ -754,14 +741,22 @@ app.get('/games/genres/:genre', usePagination, async (req, res) => {
 
     // check if sort query param is provided
     if (sort === 'releasedDesc') {
-      sortByProperty = 'release_year';
+      sortByProperty = 'first_release_date';
       sortDirection = 'desc';
-    } else if (sort === 'releasedAsc') {
-      sortByProperty = 'release_year';
+    } else if (sort === 'releasedAsce') {
+      sortByProperty = 'first_release_date';
       sortDirection = 'asc';
     }
 
-    let games = await Game.find({ 'genres.name': genre })
+    // check if release date exists
+
+    const query = { 
+      'genres.name': genre,
+      first_release_date: { $exists: true }
+    };
+
+
+    let games = await Game.find(query)
     .sort({ [sortByProperty]: sortDirection })
     .skip(startIndex)
     .limit(pageHits);
