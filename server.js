@@ -256,40 +256,6 @@ app.get('/fetch-games', fetchAllGames);
 
 // Alternatively, comment out the function after the database has been populated
 
-/////////////////////// User Endpoints
-
-// Register user
-
-app.post('/users/register', async (req, res) => {
-  const { username, password } = req.body;
-  try {
-    const salt = bcrypt.genSaltSync();
-    const hashedPassword = bcrypt.hashSync(password, salt);
-    const newUser = await User.create({
-      username: username,
-      password: hashedPassword // Hash the password
-    });
-    res.status(201).json({
-      success: true,
-      response: {
-        username: newUser.username,
-        id: newUser._id,
-        accessToken: newUser.accessToken,
-        createdAt: newUser.createdAt,
-        reviews: newUser.reviews,
-        /* favoriteGames: newUser.favoriteGames,
-        playedGames: newUser.playedGames */
-      }
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: 'Could not register user',
-      error: error.message
-    });
-  }
-});
-
 /////// Middlewares ///////
 
 // Authenticate user
@@ -338,6 +304,43 @@ const usePagination = async (req, res, next) => {
 
   next();
 };
+
+/////////////////////// Middlewares END
+
+
+/////////////////////// User Endpoints
+
+// Register user
+
+app.post('/users/register', async (req, res) => {
+  const { username, password } = req.body;
+  try {
+    const salt = bcrypt.genSaltSync();
+    const hashedPassword = bcrypt.hashSync(password, salt);
+    const newUser = await User.create({
+      username: username,
+      password: hashedPassword // Hash the password
+    });
+    res.status(201).json({
+      success: true,
+      response: {
+        username: newUser.username,
+        id: newUser._id,
+        accessToken: newUser.accessToken,
+        createdAt: newUser.createdAt,
+        reviews: newUser.reviews,
+        /* favoriteGames: newUser.favoriteGames,
+        playedGames: newUser.playedGames */
+      }
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: 'Could not register user',
+      error: error.message
+    });
+  }
+});
 
 // Login user
 app.post('/users/login', async (req, res) => {
@@ -692,19 +695,79 @@ app.get('/games', usePagination, async (req, res) => {
   }
 });
 
-// Sort by 
+// Retrieve a list of all game genres
+
+app.get('/genres', async (req, res) => {
+  try {
+    const genres = await Game.distinct('genres.name'); // distinct() returns an array of unique values
+    res.status(200).json({
+      success: true,
+      response: genres
+    });
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      message: 'Could not GET genres',
+      error: e.message
+    });
+  }
+});
+
+// Retrieve a list of genres for one specific game
+
+app.get('/games/:_id/genres', async (req, res) => {
+  try {
+    const genres = await Game.findById(req.params._id).distinct('genres.name');
+    if (genres.length === 0) {
+      res.status(200).json({
+        success: true,
+        response: [],
+        message: 'No genres found for this game'
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        response: genres
+      });
+    }
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      message: 'Could not GET genres',
+      error: e.message
+    });
+  }
+});
+
+// Get games by genre and sorting by query params
 // For example, /games/genres/action?sortBy=rating
 
 app.get('/games/genres/:genre', usePagination, async (req, res) => {
-  const { pageHits, startIndex } = req.pagination;
-  const genre = req.params.genre;
-  const sortBy = req.query.sortBy || 'name'; // Default sort by name if sortBy query param is not provided
-
   try {
-    const games = await Game.find({ 'genres.name': genre }).sort(sortBy)
+    const { pageHits, startIndex } = req.pagination;
+    const genre = req.params.genre;
+    /* const sortBy = req.query.sortBy || 'name'; // Default sort by name if sortBy query param is not provided */  
+    const { sort } = req.query;
+    // default sort values
+    let sortByProperty = 'name';
+    let sortDirection = 'asc';
+
+    // check if sort query param is provided
+    if (sort === 'releasedDesc') {
+      sortByProperty = 'release_year';
+      sortDirection = 'desc';
+    } else if (sort === 'releasedAsc') {
+      sortByProperty = 'release_year';
+      sortDirection = 'asc';
+    }
+
+    let games = await Game.find({ 'genres.name': genre })
+    .sort({ [sortByProperty]: sortDirection })
     .skip(startIndex)
     .limit(pageHits);
-    
+
+    let filteredGames = games;
+
     if (games.length === 0) {
       res.status(200).json({
         success: true,
@@ -714,7 +777,7 @@ app.get('/games/genres/:genre', usePagination, async (req, res) => {
     } else {
       res.status(200).json({
         success: true,
-        response: games
+        response: filteredGames
       });
     }
   } catch (e) {
@@ -757,7 +820,7 @@ app.get('/games', async (req, res) => {
 
 // Sorting games based on release year
 
-const sortGamesByReleaseYear = async (req, res) => {
+/* const sortGamesByReleaseYear = async (req, res) => {
   const { order } = req.query;
 
   try {
@@ -791,7 +854,7 @@ const sortGamesByReleaseYear = async (req, res) => {
   }
 };
 
-app.get('/games/sort', sortGamesByReleaseYear);
+app.get('/games/sort', sortGamesByReleaseYear); */
 
 
 // Endpoint to get one specific game
@@ -883,55 +946,9 @@ app.patch('/games/:_id/addfavorite', authenticateUser, async (req, res) => {
 });
 
 
-/////// Filtering and sorting
-
-// Retrieve a list of all game genres
-
-app.get('/genres', async (req, res) => {
-  try {
-    const genres = await Game.distinct('genres.name'); // distinct() returns an array of unique values
-    res.status(200).json({
-      success: true,
-      response: genres
-    });
-  } catch (e) {
-    res.status(500).json({
-      success: false,
-      message: 'Could not GET genres',
-      error: e.message
-    });
-  }
-});
-
-// Retrieve a list of genres for one specific game
-
-app.get('/games/:_id/genres', async (req, res) => {
-  try {
-    const genres = await Game.findById(req.params._id).distinct('genres.name');
-    if (genres.length === 0) {
-      res.status(200).json({
-        success: true,
-        response: [],
-        message: 'No genres found for this game'
-      });
-    } else {
-      res.status(200).json({
-        success: true,
-        response: genres
-      });
-    }
-  } catch (e) {
-    res.status(500).json({
-      success: false,
-      message: 'Could not GET genres',
-      error: e.message
-    });
-  }
-});
-
 // Retrieve games based on specific genre
 
-app.get('/games/genres/:genre', usePagination, async (req, res) => {
+/* app.get('/games/genres/:genre', usePagination, async (req, res) => {
   const { pageHits, startIndex } = req.pagination;
   const genre = req.params.genre;
   try {
@@ -959,7 +976,7 @@ app.get('/games/genres/:genre', usePagination, async (req, res) => {
     });
   }
 });
-
+ */
 // Retrieve a list of all game platforms
 
 /* app.get('/platforms', async (req, res) => {
@@ -1149,7 +1166,7 @@ app.delete('/users/:_id/favorites', authenticateUser, async (req, res) => {
 
 // Add game to played games (only for logged in users)
 
-app.post('/games/:_id/played', authenticateUser, async (req, res) => {
+/* app.post('/games/:_id/played', authenticateUser, async (req, res) => {
   const gameId = req.params._id;
   const userId = req.user._id;
 
@@ -1273,7 +1290,7 @@ app.delete('/games/:_id/played', authenticateUser, async (req, res) => {
       error: error.message
     });
   }
-});
+}); */
 
 ////////////////// Open AI API Generate image
 app.post('/create', async (req, res) => {
