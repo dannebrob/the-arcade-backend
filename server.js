@@ -739,7 +739,11 @@ app.get('/games', usePagination, async (req, res) => {
 
     if (genre) {
       query['genres.name'] = genre;
-    }
+    };
+
+    if (sort !== '') {
+      query.first_release_date = { $exists: true };
+    };
     // default sort values
     let sortByProperty = 'name';
     let sortDirection = 'asc';
@@ -751,7 +755,7 @@ app.get('/games', usePagination, async (req, res) => {
     } else if (sort === 'releasedAsce') {
       sortByProperty = 'first_release_date';
       sortDirection = 'asc';
-    }
+    };
 
     // check if release date exists
 
