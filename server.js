@@ -447,6 +447,33 @@ app.delete('/users/:_id', authenticateUser, async (req, res) => {
   }
 });
 
+// Fetch all users
+
+app.get('/users', async (req, res) => {
+  try {
+    const users = await User.find();
+    if (users.length === 0) {
+      // If there are no users
+      res.status(200).json({
+        success: true,
+        response: [],
+        message: 'There are no users'
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        response: users
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve users',
+      error: error.message
+    });
+  }
+});
+
 /////////////////////// User Endpoints END
 
 /////////////////////// Review Endpoints
