@@ -1,3 +1,5 @@
+import User from '../models/user.js';
+
 // Authenticate user
 const authenticateUser = async (req, res, next) => {
   const accessToken = req.header('Authorization');
