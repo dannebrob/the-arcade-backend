@@ -31,7 +31,6 @@ const app = express();
 // Add middlewares to enable cors and json body parsing
 app.use(cors());
 app.use(express.json());
-const router = express.Router();
 
 // Adds the Route's file's routes to the application at the root path
 app.use('/', fetchRouter);
