@@ -11,8 +11,6 @@ import gameRouter from './routes/games.js';
 import reviewRouter from './routes/reviews.js';
 import userRouter from './routes/users.js';
 
-const { Configuration, OpenAIApi } = require('openai');
-
 require('dotenv').config();
 
 const listEndpoints = expressListEndpoints;
@@ -21,13 +19,6 @@ const mongoUrl =
   process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/project-mongo';
 mongoose.connect(mongoUrl, { useNewUrlParser: true, useUnifiedTopology: true });
 mongoose.Promise = Promise;
-
-const { OPENAI_API_KEY } = process.env;
-
-const configuration = new Configuration({
-  apiKey: OPENAI_API_KEY
-});
-const openai = new OpenAIApi(configuration);
 
 // Defines the port the app will run on. Defaults to 8080, but can be overridden
 
