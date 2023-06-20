@@ -1,6 +1,5 @@
 import express from 'express';
 import User from '../models/user.js';
-import Game from '../models/game.js';
 import Review from '../models/review.js';
 import authenticateUser from '../middleware/authenticateUser.js';
 
